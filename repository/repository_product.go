@@ -10,6 +10,9 @@ type RepositoryProduct interface {
 	FindAll() ([]*entity.Products, error)
 	Save(product *entity.Products) (*entity.Products, error)
 	FindById(ID int) (*entity.Products, error)
+	CreateImage(product entity.ProductImage) error
+	UpdatedImage(product entity.ProductImage) error
+	DeleteImages(productID int) error
 	Update(product *entity.Products) (*entity.Products, error)
 	Delete(product *entity.Products) (*entity.Products, error)
 	FindAllProductByCategory(ID int) ([]*entity.Products, error)
@@ -21,6 +24,10 @@ type repositoryProduct struct {
 
 func NewRepositoryProduct(db *gorm.DB) *repositoryProduct {
 	return &repositoryProduct{db}
+}
+
+func (r *repositoryProduct) UpdatedImage(product entity.ProductImage) error {
+	return r.db.Save(&product).Error
 }
 
 func (r *repositoryProduct) FindAllProductByCategory(ID int) ([]*entity.Products, error) {
@@ -35,10 +42,25 @@ func (r *repositoryProduct) FindAllProductByCategory(ID int) ([]*entity.Products
 	return product, nil
 }
 
+func (r *repositoryProduct) CreateImage(product entity.ProductImage) error {
+	err := r.db.Preload("FileName").Create(&product).Error
+	return err
+
+}
+
+func (r *repositoryProduct) DeleteImages(productID int) error {
+	err := r.db.Where("product_id = ?", productID).Delete(&entity.ProductImage{}).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *repositoryProduct) FindAll() ([]*entity.Products, error) {
 	var product []*entity.Products
 
-	err := r.db.Find(&product).Error
+	err := r.db.Preload("FileName").Find(&product).Error
 
 	if err != nil {
 		return product, err
@@ -48,7 +70,7 @@ func (r *repositoryProduct) FindAll() ([]*entity.Products, error) {
 }
 
 func (r *repositoryProduct) Save(product *entity.Products) (*entity.Products, error) {
-	err := r.db.Create(&product).Error
+	err := r.db.Preload("FileName").Create(&product).Error
 
 	if err != nil {
 		return product, err
@@ -59,7 +81,7 @@ func (r *repositoryProduct) Save(product *entity.Products) (*entity.Products, er
 func (r *repositoryProduct) FindById(ID int) (*entity.Products, error) {
 	var product *entity.Products
 
-	err := r.db.Where("id = ?", ID).Find(&product).Error
+	err := r.db.Preload("FileName").Where("id = ?", ID).Find(&product).Error
 
 	if err != nil {
 		return product, err
@@ -78,7 +100,7 @@ func (r *repositoryProduct) Update(product *entity.Products) (*entity.Products, 
 }
 
 func (r *repositoryProduct) Delete(product *entity.Products) (*entity.Products, error) {
-	err := r.db.Delete(&product).Error
+	err := r.db.Preload("FileName").Delete(&product).Error
 	if err != nil {
 		return product, err
 	}

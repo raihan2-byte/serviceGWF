@@ -6,6 +6,9 @@ import (
 	"payment-gwf/entity"
 	"payment-gwf/input"
 	"payment-gwf/repository"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type ServiceOrder interface {
@@ -33,69 +36,71 @@ func NewServiceOrder(repository_order repository.RepositoryOrder, repository_car
 }
 
 func (s *service_order) CreateOrders(userID int, inputOrder input.CreateOrder) (*entity.Order, error) {
-	// Dapatkan data pengguna berdasarkan ID
+	// Get user data by ID
 	getUser, err := s.repository_user.FindById(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Dapatkan item dalam keranjang berdasarkan daftar ID
+	// Get cart items based on list of IDs
 	getAllCart, err := s.repository_cart.FindByIds(inputOrder.CartIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	// Periksa apakah keranjang kosong
+	// Check if cart is empty
 	if len(getAllCart) == 0 {
 		return nil, errors.New("cart empty")
 	}
 
-	// Periksa apakah semua item di keranjang milik pengguna yang sama
+	// Check if all cart items belong to the same user
 	for _, cartItem := range getAllCart {
 		if cartItem.UserID != userID {
 			return nil, errors.New("cart items do not belong to the user")
 		}
 	}
 
-	// Inisialisasi variabel untuk total harga
+	// Initialize variable for total price
 	var totalPrice int
 
-	// Buat slice untuk menyimpan item pesanan
+	// Create slice to store order items
 	var orderItems []entity.OrderItem
 
-	// Loop melalui semua item di keranjang untuk menghitung total harga
+	// Loop through all cart items to calculate total price
 	for _, item := range getAllCart {
-		// Dapatkan informasi produk berdasarkan ID produk di keranjang
+		// Get product information based on product ID in cart
 		product, err := s.repository_product.FindById(item.ProductID)
 		if err != nil {
 			return nil, err
 		}
 
-		// Periksa stok produk
+		// Check product stock
 		if product.Stock < item.Quantity {
 			return nil, errors.New("insufficient stock for product: " + product.Name)
 		}
 
-		// Tambahkan harga produk ke total harga
+		// Add product price to total price
 		totalPrice += product.Price * item.Quantity
 
-		// Buat entitas OrderItem
+		// Create OrderItem entity
 		orderItem := entity.OrderItem{
 			ProductID: product.ID,
 			Quantity:  item.Quantity,
 			Price:     product.Price,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		}
 
-		// Tambahkan ke slice orderItems
+		// Add to orderItems slice
 		orderItems = append(orderItems, orderItem)
 	}
 
-	// Hitung biaya pengiriman menggunakan fungsi ApplyShipping
+	// Calculate shipping fee using ApplyShipping function
 	shippingParams := entity.ShippingFeeParams{
 		Origin:      os.Getenv("API_ONGKIR_ORIGIN"),
-		Destination: inputOrder.Destination, // Pastikan inputOrder memiliki field ini
-		Weight:      1000,                   // Sesuaikan dengan kebutuhan Anda
-		Courier:     inputOrder.Courier,     // Pastikan inputOrder memiliki field ini
+		Destination: inputOrder.Destination, // Ensure inputOrder has this field
+		Weight:      1000,                   // Adjust as needed
+		Courier:     inputOrder.Courier,     // Ensure inputOrder has this field
 		HomeAddress: inputOrder.HomeAddress,
 	}
 	shippingResponse, err := s.serviceRajaOngkir.ApplyShipping(shippingParams, inputOrder.ShippingPackage, userID)
@@ -103,40 +108,41 @@ func (s *service_order) CreateOrders(userID int, inputOrder input.CreateOrder) (
 		return nil, err
 	}
 
-	// Tambahkan biaya pengiriman ke total harga
+	// Add shipping fee to total price
 	totalPrice += shippingResponse.ShippingFee
 
-	// Buat entitas pesanan baru
+	// Create new order entity
 	order := &entity.Order{
+		ID:          uuid.New().String(),
 		UserID:      getUser.ID,
 		TotalPrice:  totalPrice,
-		ShippingFee: shippingResponse.ShippingFee, // Tambahkan field ini
+		ShippingFee: shippingResponse.ShippingFee,
 		OngkirID:    shippingResponse.ID,
-		// StatusPayment: "pending", // Misalnya status awal adalah pending
-		Items: orderItems,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
-	// Simpan pesanan ke dalam database
+	// Save order to database
 	newOrder, err := s.repository_order.Save(order)
 	if err != nil {
 		return nil, err
 	}
 
-	// Loop untuk menyimpan setiap item pesanan dan mengurangi stok produk
+	// Loop to save each order item and reduce product stock
 	for _, item := range orderItems {
 		product, err := s.repository_product.FindById(item.ProductID)
 		if err != nil {
 			return nil, err
 		}
 
-		// Kurangi stok produk
+		// Reduce product stock
 		product.Stock -= item.Quantity
 		_, err = s.repository_product.Update(product)
 		if err != nil {
 			return nil, err
 		}
 
-		// Set OrderID untuk OrderItem dan simpan ke dalam database
+		// Set OrderID for OrderItem and save to database
 		item.OrderID = newOrder.ID
 		_, err = s.repository_order.SaveOrderItem(item)
 		if err != nil {
@@ -144,18 +150,8 @@ func (s *service_order) CreateOrders(userID int, inputOrder input.CreateOrder) (
 		}
 	}
 
-	// Hapus item dalam keranjang berdasarkan ID setelah pesanan dibuat
+	// Clear cart items based on IDs after order is created
 	err = s.repository_cart.ClearCartByIds(inputOrder.CartIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	savePayment := &entity.Payment{}
-	savePayment.StatusPayment = "pending"
-	savePayment.OrderID = newOrder.ID
-	savePayment.UserID = newOrder.UserID
-
-	_, err = s.repositoryPayment.Save(savePayment)
 	if err != nil {
 		return nil, err
 	}
@@ -185,59 +181,3 @@ func (s *service_order) GetAllOrderHistory() ([]*entity.Order, error) {
 
 	return get, nil
 }
-
-// func (s *service_order) UpdatedCart(getCartID int, getUserID int, Qty input.InputCart) (*entity.Order, error) {
-// 	cartID, err := s.repository_cart.FindById(getCartID)
-// 	if err != nil {
-// 		return cartID, err
-// 	}
-
-// 	userID, err := s.repository_user.FindById(getUserID)
-// 	if err != nil {
-// 		return &entity.Order{}, err
-// 	}
-
-// 	productID, err := s.repository_product.FindById(cartID.ProductID)
-// 	if err != nil {
-// 		return &entity.Order{}, err
-// 	}
-
-// 	totalPrice := Qty.Quantity * productID.Price
-
-// 	cartID.Quantity = Qty.Quantity
-// 	cartID.TotalPrice = totalPrice
-// 	cartID.ProductID = productID.ID
-// 	cartID.UserID = userID.ID
-
-// 	updatedCart, err := s.repository_cart.Update(cartID)
-// 	if err != nil {
-// 		return updatedCart, err
-// 	}
-
-// 	return updatedCart, nil
-// }
-
-// func (s *service_order) DeleteCart(userID int, cartID input.GetID) (*entity.Order, error) {
-// 	// Cek apakah cart dengan cartID tersebut milik user dengan userID yang sesuai
-// 	getCart, err := s.repository_cart.FindById(cartID.ID)
-// 	if err != nil {
-// 		return getCart, err
-// 	}
-
-// 	getUser, err := s.repository_user.FindById(userID)
-// 	if err != nil {
-// 		return &entity.Order{}, err
-// 	}
-
-// 	if getCart.UserID != getUser.ID {
-// 		return nil, errors.New("cart does not belong to current user")
-// 	}
-
-// 	// Hapus cart
-// 	del, err := s.repository_cart.Delete(getCart)
-// 	if err != nil {
-// 		return del, err
-// 	}
-
-// 	return del, nil
-// }

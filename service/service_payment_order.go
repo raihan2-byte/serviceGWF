@@ -5,7 +5,6 @@ import (
 	"payment-gwf/entity"
 	"payment-gwf/input"
 	"payment-gwf/repository"
-	"strconv"
 
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/coreapi"
@@ -39,33 +38,50 @@ type ServicePayment interface {
 	GetAllPayment() ([]*entity.Payment, error)
 	GetPaymentByID(ID int) (*entity.Payment, error)
 	DeletePayment(ID int) (*entity.Payment, error)
+	HandleNotification(res *entity.MidtransNotificationRequest) error
 	GetAllByUserID(ID int) ([]*entity.Payment, error)
-	DoPayment(req input.SubmitPaymentRequest, orderID int) (*entity.ResponDoPayment, error)
+	DoPayment(req input.SubmitPaymentRequest, orderID string) (*entity.DoPayment, error)
 }
 
 type servicePayment struct {
-	repositoryPayment repository.RepositoryPayment
-	repositoryUser    repository.RepositoryUser
-	repositoryOrder   repository.RepositoryOrder
-	midtransGateway   *midtransGateway
+	repositoryPayment        repository.RepositoryPayment
+	repositoryUser           repository.RepositoryUser
+	repositoryOrder          repository.RepositoryOrder
+	repositoryPaymentDetails repository.RepositoryPaymentDetails
+	midtransGateway          *midtransGateway
 }
 
-func NewServicePayment(repositoryPayment repository.RepositoryPayment, repositoryUser repository.RepositoryUser, repositoryOrder repository.RepositoryOrder, midtransGateway *midtransGateway) *servicePayment {
+func NewServicePayment(repositoryPayment repository.RepositoryPayment, repositoryUser repository.RepositoryUser, repositoryOrder repository.RepositoryOrder, repositoryPaymentDetails repository.RepositoryPaymentDetails, midtransGateway *midtransGateway) *servicePayment {
 	return &servicePayment{
 		repositoryPayment: repositoryPayment,
 		repositoryUser:    repositoryUser,
 		repositoryOrder:   repositoryOrder,
-		midtransGateway:   midtransGateway,
+		// repositoryMidtrans: repositoryMidtrans,
+		repositoryPaymentDetails: repositoryPaymentDetails,
+		midtransGateway:          midtransGateway,
 	}
 }
 
-func (s *servicePayment) DoPayment(req input.SubmitPaymentRequest, orderID int) (*entity.ResponDoPayment, error) {
-	getOrder, err := s.repositoryOrder.FindById((orderID))
+func (s *servicePayment) HandleNotification(req *entity.MidtransNotificationRequest) error {
+	findPayment, err := s.repositoryPayment.FindByTransactionID(req.TransactionID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	valGetOrderID := strconv.Itoa(getOrder.ID)
+	findPayment.StatusPayment = req.TransactionStatus
+
+	_, err = s.repositoryPayment.Update(findPayment)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *servicePayment) DoPayment(req input.SubmitPaymentRequest, orderID string) (*entity.DoPayment, error) {
+	getOrder, err := s.repositoryOrder.FindById(orderID)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching order: %w", err)
+	}
 
 	chosenBank, ok := listOfBank[req.BankTransfer]
 	if !ok {
@@ -75,7 +91,7 @@ func (s *servicePayment) DoPayment(req input.SubmitPaymentRequest, orderID int) 
 	resp, err := s.midtransGateway.client.ChargeTransaction(&coreapi.ChargeReq{
 		PaymentType: coreapi.PaymentTypeBankTransfer,
 		TransactionDetails: midtrans.TransactionDetails{
-			OrderID:  valGetOrderID,
+			OrderID:  getOrder.ID,
 			GrossAmt: int64(getOrder.TotalPrice),
 		},
 		BankTransfer: &coreapi.BankTransferDetails{
@@ -83,14 +99,30 @@ func (s *servicePayment) DoPayment(req input.SubmitPaymentRequest, orderID int) 
 		},
 	})
 
+	// if err != nil {
+	// 	return nil, fmt.Errorf("error during charge transaction: %w", err)
+	// }
+
+	pay := &entity.Payment{
+		StatusPayment: "pending",
+		OrderID:       getOrder.ID,
+		UserID:        getOrder.UserID,
+		TransactionID: resp.TransactionID,
+	}
+
+	_, err = s.repositoryPayment.Save(pay)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error saving payment: %w", err)
 	}
 
 	return mapChargeToResponse(resp)
 }
 
-func mapChargeToResponse(resp *coreapi.ChargeResponse) (*entity.ResponDoPayment, error) {
+func mapChargeToResponse(resp *coreapi.ChargeResponse) (*entity.DoPayment, error) {
+	if resp == nil {
+		return nil, fmt.Errorf("nil response received")
+	}
+
 	var vaNumbers []entity.VaNumber
 	for _, va := range resp.VaNumbers {
 		vaNumbers = append(vaNumbers, entity.VaNumber{
@@ -99,12 +131,14 @@ func mapChargeToResponse(resp *coreapi.ChargeResponse) (*entity.ResponDoPayment,
 		})
 	}
 
-	return &entity.ResponDoPayment{
-		TransactionID: resp.TransactionID,
-		OrderID:       resp.OrderID,
-		GrossAmount:   resp.GrossAmount,
-		VaNumbers:     vaNumbers,
-		MerchantID:    "G317569034",
+	return &entity.DoPayment{
+		TransactionID:     resp.TransactionID,
+		OrderID:           resp.OrderID,
+		GrossAmount:       resp.GrossAmount,
+		PaymentType:       resp.PaymentType,
+		TransactionStatus: resp.TransactionStatus,
+		VaNumbers:         vaNumbers,
+		MerchantID:        "G317569034",
 	}, nil
 }
 
@@ -115,6 +149,18 @@ func (s *servicePayment) GetAllPayment() ([]*entity.Payment, error) {
 	}
 	return address, nil
 }
+
+// func (s *servicePayment) UpdatePayment(ID int) (*entity.Payment, error) {
+// 	findPayment, err := s.repositoryPayment.FindById(ID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	data := entity.Payment{}
+// 	data.TransactionID =
+
+// 	update, err := s.repositoryPayment.Update()
+// }
 
 func (s *servicePayment) GetPaymentByID(ID int) (*entity.Payment, error) {
 	address, err := s.repositoryPayment.FindById(ID)

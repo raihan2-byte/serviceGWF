@@ -15,12 +15,14 @@ type UserFormatter struct {
 }
 
 type LoginFormatter struct {
-	Token string `json:"Token"`
+	Username string `json:"Name"`
+	Token    string `json:"Token"`
 }
 
 func LoginFormatterUser(user *entity.User, Token string) LoginFormatter {
 	formatter := LoginFormatter{
-		Token: Token,
+		Username: user.Username,
+		Token:    Token,
 	}
 	return formatter
 }

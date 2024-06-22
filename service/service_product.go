@@ -10,8 +10,11 @@ type ServiceProduct interface {
 	CreateProduct(input input.ProductInput) (*entity.Products, error)
 	GetProducts() ([]*entity.Products, error)
 	GetProduct(ID int) (*entity.Products, error)
-	DeleteProduct(ID int) (*entity.Products, error)
+	CreateProductImage(productID int, FileName string) error
+	DeleteProduct(ID int) error
+	UpdatedImage(fileName string, productID int) error
 	UpdateProduct(ID int, input input.ProductInput) (*entity.Products, error)
+	DeleteProductImages(productID int) error
 }
 
 type serviceProduct struct {
@@ -20,6 +23,28 @@ type serviceProduct struct {
 
 func NewServiceProduct(repositoryProduct repository.RepositoryProduct) *serviceProduct {
 	return &serviceProduct{repositoryProduct}
+}
+func (s *serviceProduct) UpdatedImage(fileName string, productID int) error {
+	productImage := entity.ProductImage{
+		ProductID: productID,
+		FileName:  fileName,
+	}
+
+	return s.repositoryProduct.UpdatedImage(productImage)
+}
+
+func (s *serviceProduct) CreateProductImage(productID int, FileName string) error {
+	createProcut := entity.ProductImage{}
+
+	createProcut.FileName = FileName
+	createProcut.ProductID = productID
+
+	err := s.repositoryProduct.CreateImage(createProcut)
+	if err != nil {
+		return err
+	}
+	return nil
+
 }
 
 func (s *serviceProduct) GetProductByCategory(ID int) ([]*entity.Products, error) {
@@ -45,7 +70,7 @@ func (s *serviceProduct) UpdateProduct(ID int, input input.ProductInput) (*entit
 		return find, err
 	}
 
-	find.Name = input.Title
+	find.Name = input.Name
 	find.Price = input.Price
 	find.Stock = input.Stock
 
@@ -59,7 +84,7 @@ func (s *serviceProduct) UpdateProduct(ID int, input input.ProductInput) (*entit
 func (s *serviceProduct) CreateProduct(input input.ProductInput) (*entity.Products, error) {
 	product := &entity.Products{}
 
-	product.Name = input.Title
+	product.Name = input.Name
 	product.Price = input.Price
 	product.Stock = input.Stock
 
@@ -68,6 +93,10 @@ func (s *serviceProduct) CreateProduct(input input.ProductInput) (*entity.Produc
 		return newProduct, err
 	}
 	return newProduct, nil
+}
+
+func (s *serviceProduct) DeleteProductImages(productID int) error {
+	return s.repositoryProduct.DeleteImages(productID)
 }
 
 func (s *serviceProduct) GetProduct(ID int) (*entity.Products, error) {
@@ -85,17 +114,24 @@ func (s *serviceProduct) GetProduct(ID int) (*entity.Products, error) {
 	return product, nil
 }
 
-func (s *serviceProduct) DeleteProduct(ID int) (*entity.Products, error) {
-
+func (s *serviceProduct) DeleteProduct(ID int) error {
+	// Temukan produk berdasarkan ID
 	product, err := s.repositoryProduct.FindById(ID)
 	if err != nil {
-		return product, err
+		return err // Produk tidak ditemukan atau terjadi kesalahan lainnya
 	}
-	productDel, err := s.repositoryProduct.Delete(product)
 
+	// Hapus gambar yang terkait dengan produk
+	err = s.repositoryProduct.DeleteImages(ID)
 	if err != nil {
-		return productDel, err
+		return err // Tangani kesalahan jika penghapusan gambar gagal
 	}
-	return productDel, nil
 
+	// Hapus produk dari basis data
+	_, err = s.repositoryProduct.Delete(product)
+	if err != nil {
+		return err // Tangani kesalahan jika penghapusan produk gagal
+	}
+
+	return nil
 }

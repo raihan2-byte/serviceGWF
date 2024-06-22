@@ -34,10 +34,10 @@ func (h *statusEkspedisiHandler) CreateStatusEkspedisi(c *gin.Context) {
 	user := c.Param("user_id")
 	paramUser, _ := strconv.Atoi(user)
 
-	order := c.Param("order_id")
-	paramOrder, _ := strconv.Atoi(order)
+	payment := c.Param("payment_id")
+	paramPayment, _ := strconv.Atoi(payment)
 
-	create, err := h.statusEkspedisiService.CreateStatusEkspedisi(input, paramOrder, paramUser)
+	create, err := h.statusEkspedisiService.CreateStatusEkspedisi(input, paramPayment, paramUser)
 	if err != nil {
 		response := helper.APIresponse(http.StatusBadRequest, err.Error())
 		c.JSON(http.StatusBadRequest, response)

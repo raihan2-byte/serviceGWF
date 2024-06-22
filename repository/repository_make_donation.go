@@ -9,7 +9,7 @@ import (
 type RepositoryMakeDonation interface {
 	FindAll() ([]*entity.MakeDonation, error)
 	Save(donations *entity.MakeDonation) (*entity.MakeDonation, error)
-	FindById(ID int) (*entity.MakeDonation, error)
+	FindById(ID string) (*entity.MakeDonation, error)
 	FindDonationByUserID(ID int) (*entity.MakeDonation, error)
 	Update(donations *entity.MakeDonation) (*entity.MakeDonation, error)
 	Delete(product *entity.MakeDonation) (*entity.MakeDonation, error)
@@ -37,7 +37,7 @@ func (r *repositoryMakeDonation) FindDonationByUserID(ID int) (*entity.MakeDonat
 func (r *repositoryMakeDonation) FindAll() ([]*entity.MakeDonation, error) {
 	var donations []*entity.MakeDonation
 
-	err := r.db.Find(&donations).Error
+	err := r.db.Preload("User").Find(&donations).Error
 
 	if err != nil {
 		return donations, err
@@ -55,7 +55,7 @@ func (r *repositoryMakeDonation) Save(donations *entity.MakeDonation) (*entity.M
 	return donations, nil
 }
 
-func (r *repositoryMakeDonation) FindById(ID int) (*entity.MakeDonation, error) {
+func (r *repositoryMakeDonation) FindById(ID string) (*entity.MakeDonation, error) {
 	var donations *entity.MakeDonation
 
 	err := r.db.Where("id = ?", ID).Find(&donations).Error

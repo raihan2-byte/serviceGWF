@@ -5,7 +5,7 @@ import (
 )
 
 type Order struct {
-	ID          int
+	ID          string `gorm:"type:varchar(36);primaryKey"`
 	UserID      int
 	TotalPrice  int
 	OngkirID    int
@@ -19,7 +19,7 @@ type Order struct {
 
 type OrderItem struct {
 	ID        int
-	OrderID   int
+	OrderID   string
 	ProductID int
 	Quantity  int
 	Price     int

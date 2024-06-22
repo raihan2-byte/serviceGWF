@@ -80,7 +80,7 @@ func (r *repository_cart) ClearCartByUserID(userID int) error {
 func (r *repository_cart) FindAllByUserID(ID int) ([]*entity.Cart, error) {
 	var carts []*entity.Cart
 
-	err := r.db.Preload("Product").Preload("User").Where("user_id = ?", ID).Find(&carts).Error
+	err := r.db.Preload("Product").Preload("Product.FileName").Preload("User").Where("user_id = ?", ID).Find(&carts).Error
 	if err != nil {
 		return carts, err
 	}

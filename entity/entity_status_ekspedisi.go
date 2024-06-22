@@ -7,10 +7,12 @@ type StatusEkspedisi struct {
 	ResiInfo  string
 	UserID    int
 	User      User
-	OrderID   int
+	OrderID   string
 	OngkirID  int
+	PaymentID int
 	Order     Order                 `gorm:"foreignKey:OrderID"`
 	Ongkir    ApplyShippingResponse `gorm:"foreignKey:OngkirID"`
+	Payment   Payment
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

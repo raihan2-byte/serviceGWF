@@ -37,7 +37,7 @@ func (r *repositoryStatusEkspedisi) FindByID(ID int) (*entity.StatusEkspedisi, e
 func (r *repositoryStatusEkspedisi) FindAllByUserID(ID int) ([]*entity.StatusEkspedisi, error) {
 	var status []*entity.StatusEkspedisi
 
-	err := r.db.Preload("Order").Preload("User").Preload("Ongkir").Where("user_id = ?", ID).Find(&status).Error
+	err := r.db.Preload("Payment").Preload("Ongkir").Preload("Order").Preload("Order.Items").Preload("Order.Items.Product").Preload("User").Where("user_id = ?", ID).Find(&status).Error
 	if err != nil {
 		return status, err
 	}
@@ -47,7 +47,7 @@ func (r *repositoryStatusEkspedisi) FindAllByUserID(ID int) ([]*entity.StatusEks
 func (r *repositoryStatusEkspedisi) FindAll() ([]*entity.StatusEkspedisi, error) {
 	var status []*entity.StatusEkspedisi
 
-	err := r.db.Preload("Ongkir").Preload("Order").Preload("User").Find(&status).Error
+	err := r.db.Preload("Payment").Preload("Ongkir").Preload("Order").Preload("Order.Items").Preload("Order.Items.Product").Preload("User").Find(&status).Error
 
 	if err != nil {
 		return status, err
@@ -68,7 +68,7 @@ func (r *repositoryStatusEkspedisi) Save(status *entity.StatusEkspedisi) (*entit
 func (r *repositoryStatusEkspedisi) FindById(ID int) (*entity.StatusEkspedisi, error) {
 	var status *entity.StatusEkspedisi
 
-	err := r.db.Where("id = ?", ID).Find(&status).Error
+	err := r.db.Preload("Ongkir").Where("id = ?", ID).Find(&status).Error
 
 	if err != nil {
 		return status, err

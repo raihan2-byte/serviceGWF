@@ -10,7 +10,7 @@ type RepositoryOrder interface {
 	FindAll() ([]*entity.Order, error)
 	Save(order *entity.Order) (*entity.Order, error)
 	SaveOrderItem(order entity.OrderItem) (entity.OrderItem, error)
-	FindById(ID int) (*entity.Order, error)
+	FindById(ID string) (*entity.Order, error)
 	Update(order *entity.Order) (*entity.Order, error)
 	Delete(order *entity.Order) (*entity.Order, error)
 	FindAllByUserID(ID int) ([]*entity.Order, error)
@@ -34,7 +34,7 @@ func (r *repository_order) FindAll() ([]*entity.Order, error) {
 	return order, nil
 }
 
-func (r *repository_order) FindById(ID int) (*entity.Order, error) {
+func (r *repository_order) FindById(ID string) (*entity.Order, error) {
 	var order *entity.Order
 	err := r.db.Preload("Ongkir").Where("id = ?", ID).Find(&order).Error
 	if err != nil {

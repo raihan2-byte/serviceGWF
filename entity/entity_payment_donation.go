@@ -2,14 +2,14 @@ package entity
 
 import "time"
 
-type Payment struct {
+type PaymentDonation struct {
 	ID             int
 	StatusPayment  string
 	TransactionID  string
-	OrderID        string
+	MakeDonationID string
+	MakeDonation   MakeDonation `gorm:"foreignKey:MakeDonationID"`
 	UserID         int
 	User           User
-	Order          Order
 	PaymentDetails *PaymentDetails
 	CreatedAt      time.Time
 	UpdatedAt      time.Time

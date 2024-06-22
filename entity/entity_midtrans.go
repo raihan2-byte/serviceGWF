@@ -22,7 +22,7 @@ type MidtransNotificationRequest struct {
 	ApprovalCode           string `json:"approval_code"`
 }
 
-type ResponDoPayment struct {
+type DoPayment struct {
 	StatusCode        string     `json:"status_code"`
 	StatusMessage     string     `json:"status_message"`
 	TransactionID     string     `json:"transaction_id"`
@@ -41,3 +41,7 @@ type VaNumber struct {
 	Bank     string `json:"bank"`
 	VaNumber string `json:"va_number"`
 }
+
+// type responseDoPayment struct {
+// 	VaNumbers []VaNumber `json:"va_numbers"`
+// }

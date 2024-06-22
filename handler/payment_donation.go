@@ -9,30 +9,22 @@ import (
 	"payment-gwf/helper"
 	"payment-gwf/input"
 	"payment-gwf/service"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-type paymentHandler struct {
-	paymentService service.ServicePayment
-	authService    auth.Service
+type paymentDonationHandler struct {
+	paymentDonationService service.ServicePaymentDonation
+	authService            auth.Service
 }
 
-func NewPaymentHandler(paymentService service.ServicePayment, authService auth.Service) *paymentHandler {
-	return &paymentHandler{paymentService, authService}
+func NewPaymentDonationHandler(paymentDonationService service.ServicePaymentDonation, authService auth.Service) *paymentDonationHandler {
+	return &paymentDonationHandler{paymentDonationService, authService}
 }
 
 // will be called by user through payment endpoint
-func (h *paymentHandler) DoPayment(c *gin.Context) {
-	//1. get order data
-	orderID := c.Param("order_id")
-	log.Println("Order ID received:", orderID)
-	// params, err := strconv.Atoi(orderID)
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order_id"})
-	// 	return
-	// }
+func (h *paymentDonationHandler) DoPaymentDonation(c *gin.Context) {
+	makeDonationID := c.Param("make_donation_id")
 
 	var req input.SubmitPaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -40,21 +32,16 @@ func (h *paymentHandler) DoPayment(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Request payload: %+v", req)
-
-	resp, err := h.paymentService.DoPayment(req, orderID)
+	resp, err := h.paymentDonationService.DoPaymentDonation(req, makeDonationID)
 	if err != nil {
-		log.Printf("Error during payment: %+v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	log.Printf("Payment response: %+v", formatter.FormatSimplePaymentResponse(resp))
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, formatter.FormatSimplePaymentResponse(resp))
 }
 
-// will be called by midtrans to notify payment status
-func (h *paymentHandler) GetPaymentNotification(c *gin.Context) {
+func (h *paymentDonationHandler) GetPaymentDonationNotification(c *gin.Context) {
 	// orderID := c.Param("order_id")
 
 	// params, err := strconv.Atoi(orderID)
@@ -65,7 +52,7 @@ func (h *paymentHandler) GetPaymentNotification(c *gin.Context) {
 		return
 	}
 
-	err := h.paymentService.HandleNotification(input)
+	err := h.paymentDonationService.HandleNotificationPaymentDonation(input)
 	if err != nil {
 		log.Printf("Error during payment: %+v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -80,38 +67,38 @@ func (h *paymentHandler) GetPaymentNotification(c *gin.Context) {
 	//4. update db payment status
 }
 
-func (h *paymentHandler) GetAllPaymentByUserID(c *gin.Context) {
+func (h *paymentDonationHandler) GetAllPaymentByUserID(c *gin.Context) {
 	currentUser := c.MustGet("currentUser").(*entity.User)
 	//ini inisiasi userID yang mana ingin mendapatkan id si user
 	getUserId := currentUser.ID
 
-	getOrder, err := h.paymentService.GetAllByUserID(getUserId)
+	getOrder, err := h.paymentDonationService.GetAllDonationByUserID(getUserId)
 	if err != nil {
 		response := helper.APIresponse(http.StatusBadRequest, err.Error())
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
-	response := helper.APIresponse(http.StatusOK, formatter.FormatterGetPayments(getOrder))
+	response := helper.APIresponse(http.StatusOK, formatter.FormatterGetAllPaymentDonation(getOrder))
 	c.JSON(http.StatusOK, response)
 }
 
-func (h *paymentHandler) GetAllPayment(c *gin.Context) {
+func (h *paymentDonationHandler) GetAllPayment(c *gin.Context) {
 
-	getOrder, err := h.paymentService.GetAllPayment()
+	getOrder, err := h.paymentDonationService.GetAllPaymentDonation()
 	if err != nil {
 		response := helper.APIresponse(http.StatusBadRequest, err.Error())
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
-	response := helper.APIresponse(http.StatusOK, formatter.FormatterGetPayments(getOrder))
+	response := helper.APIresponse(http.StatusOK, formatter.FormatterGetAllPaymentDonation(getOrder))
 	c.JSON(http.StatusOK, response)
 }
 
-func (h *paymentHandler) DeletePayment(c *gin.Context) {
+func (h *paymentDonationHandler) DeletePayment(c *gin.Context) {
 	param := c.Param("id")
-	paramPayment, _ := strconv.Atoi(param)
+	// paramPayment, _ := strconv.Atoi(param)
 
-	_, err := h.paymentService.DeletePayment(paramPayment)
+	_, err := h.paymentDonationService.DeletePaymentDonation(param)
 	if err != nil {
 		response := helper.APIresponse(http.StatusBadRequest, err.Error())
 		c.JSON(http.StatusBadRequest, response)

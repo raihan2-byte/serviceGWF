@@ -5,22 +5,25 @@ import (
 	"payment-gwf/entity"
 	"payment-gwf/input"
 	"payment-gwf/repository"
+
+	"github.com/google/uuid"
 )
 
 type ServiceMakeDonation interface {
 	CreateDonation(userID int, input input.MakeDonationInput) (*entity.MakeDonation, error)
 	GetDonations() ([]*entity.MakeDonation, error)
 	GetDonation(userID int) (*entity.MakeDonation, error)
-	DeleteDonation(ID int) (*entity.MakeDonation, error)
+	DeleteDonation(ID string) (*entity.MakeDonation, error)
 }
 
 type serviceMakeDonation struct {
-	repositoryMakeDonation repository.RepositoryMakeDonation
-	repositoryUser         repository.RepositoryUser
+	repositoryMakeDonation    repository.RepositoryMakeDonation
+	repositoryUser            repository.RepositoryUser
+	repositoryPaymentDonation repository.RepositoryPaymentDonation
 }
 
-func NewServiceMakeDonation(repositoryMakeDonation repository.RepositoryMakeDonation, repositoryUser repository.RepositoryUser) *serviceMakeDonation {
-	return &serviceMakeDonation{repositoryMakeDonation, repositoryUser}
+func NewServiceMakeDonation(repositoryMakeDonation repository.RepositoryMakeDonation, repositoryUser repository.RepositoryUser, repositoryPaymentDonation repository.RepositoryPaymentDonation) *serviceMakeDonation {
+	return &serviceMakeDonation{repositoryMakeDonation, repositoryUser, repositoryPaymentDonation}
 }
 
 func (s *serviceMakeDonation) GetDonations() ([]*entity.MakeDonation, error) {
@@ -47,12 +50,22 @@ func (s *serviceMakeDonation) CreateDonation(userID int, input input.MakeDonatio
 	}
 	donations.Message = input.Message
 	donations.UserID = getUser.ID
-	donations.StatusPayment = "pending"
+	donations.ID = uuid.New().String()
 
 	newDonations, err := s.repositoryMakeDonation.Save(donations)
 	if err != nil {
 		return newDonations, err
 	}
+
+	// savePaymentDonation := &entity.PaymentDonation{}
+	// savePaymentDonation.StatusPayment = "pending"
+	// savePaymentDonation.MakeDonationID = newDonations.ID
+	// savePaymentDonation.UserID = newDonations.UserID
+
+	// _, err = s.repositoryPaymentDonation.Save(savePaymentDonation)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	return newDonations, nil
 }
 
@@ -70,7 +83,7 @@ func (s *serviceMakeDonation) GetDonation(userID int) (*entity.MakeDonation, err
 	return donations, nil
 }
 
-func (s *serviceMakeDonation) DeleteDonation(ID int) (*entity.MakeDonation, error) {
+func (s *serviceMakeDonation) DeleteDonation(ID string) (*entity.MakeDonation, error) {
 
 	donations, err := s.repositoryMakeDonation.FindById(ID)
 	if err != nil {

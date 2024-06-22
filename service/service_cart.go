@@ -105,6 +105,10 @@ func (s *service_cart) UpdatedCart(getCartID int, getUserID int, Qty input.Input
 		return &entity.Cart{}, err
 	}
 
+	if cartID.UserID != userID.ID {
+		return nil, errors.New("cart does not belong to current user")
+	}
+
 	totalPrice := Qty.Quantity * productID.Price
 
 	cartID.Quantity = Qty.Quantity

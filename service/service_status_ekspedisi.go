@@ -8,7 +8,7 @@ import (
 )
 
 type ServiceStatusEkspedisi interface {
-	CreateStatusEkspedisi(input input.InputStatusEkspedisi, orderID int, userID int) (*entity.StatusEkspedisi, error)
+	CreateStatusEkspedisi(input input.InputStatusEkspedisi, paymentID int, userID int) (*entity.StatusEkspedisi, error)
 	GetAllStatusEkspedisi() ([]*entity.StatusEkspedisi, error)
 	GetStatusEkspedisiByUser(ID int) ([]*entity.StatusEkspedisi, error)
 	DeleteStatusEkspedisi(ID int) (*entity.StatusEkspedisi, error)
@@ -20,10 +20,11 @@ type serviceStatusEkspedisi struct {
 	repositoryStatusEkspedisi repository.RepositoryStatusEkspedisi
 	repositoryOrder           repository.RepositoryOrder
 	repositoryUser            repository.RepositoryUser
+	repositoryPayment         repository.RepositoryPayment
 }
 
-func NewServiceStatusEkspedisi(repositoryStatusEkspedisi repository.RepositoryStatusEkspedisi, repositoryOrder repository.RepositoryOrder, repositoryUser repository.RepositoryUser) *serviceStatusEkspedisi {
-	return &serviceStatusEkspedisi{repositoryStatusEkspedisi, repositoryOrder, repositoryUser}
+func NewServiceStatusEkspedisi(repositoryStatusEkspedisi repository.RepositoryStatusEkspedisi, repositoryOrder repository.RepositoryOrder, repositoryUser repository.RepositoryUser, repositoryPayment repository.RepositoryPayment) *serviceStatusEkspedisi {
+	return &serviceStatusEkspedisi{repositoryStatusEkspedisi, repositoryOrder, repositoryUser, repositoryPayment}
 }
 
 func (s *serviceStatusEkspedisi) UpdateStatusEkspedisi(ID int, input input.InputStatusEkspedisi) (*entity.StatusEkspedisi, error) {
@@ -46,8 +47,13 @@ func (s *serviceStatusEkspedisi) UpdateStatusEkspedisi(ID int, input input.Input
 	return update, nil
 }
 
-func (s *serviceStatusEkspedisi) CreateStatusEkspedisi(input input.InputStatusEkspedisi, orderID int, userID int) (*entity.StatusEkspedisi, error) {
-	findOrder, err := s.repositoryOrder.FindById(orderID)
+func (s *serviceStatusEkspedisi) CreateStatusEkspedisi(input input.InputStatusEkspedisi, paymentID int, userID int) (*entity.StatusEkspedisi, error) {
+	findPayment, err := s.repositoryPayment.FindById(paymentID)
+	if err != nil {
+		return nil, err
+	}
+
+	findOrder, err := s.repositoryOrder.FindById(findPayment.OrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -57,15 +63,17 @@ func (s *serviceStatusEkspedisi) CreateStatusEkspedisi(input input.InputStatusEk
 		return nil, err
 	}
 
-	if findOrder.Ongkir.ID == 0 {
+	if findOrder.OngkirID == 0 {
+
 		return nil, fmt.Errorf("invalid OngkirID: %d", findOrder.Ongkir.ID)
 	}
 
 	val := &entity.StatusEkspedisi{
-		ResiInfo: input.ResiInfo,
-		OrderID:  findOrder.ID,
-		UserID:   findUser.ID,
-		OngkirID: findOrder.Ongkir.ID,
+		ResiInfo:  input.ResiInfo,
+		OrderID:   findOrder.ID,
+		UserID:    findUser.ID,
+		PaymentID: findPayment.ID,
+		OngkirID:  findOrder.Ongkir.ID,
 	}
 
 	create, err := s.repositoryStatusEkspedisi.Save(val)

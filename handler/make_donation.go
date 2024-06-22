@@ -7,7 +7,6 @@ import (
 	"payment-gwf/helper"
 	"payment-gwf/input"
 	"payment-gwf/service"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -78,9 +77,9 @@ func (h *makeDonationHandler) GetDonation(c *gin.Context) {
 
 func (h *makeDonationHandler) DeleteDonation(c *gin.Context) {
 	idString := c.Param("id")
-	id, _ := strconv.Atoi(idString)
+	// id, _ := strconv.Atoi(idString)
 
-	products, err := h.makeDonationService.DeleteDonation(int(id))
+	products, err := h.makeDonationService.DeleteDonation(idString)
 	if err != nil {
 		response := helper.APIresponse(http.StatusBadRequest, "Eror to get product")
 		c.JSON(http.StatusBadRequest, response)

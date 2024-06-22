@@ -1,9 +1,9 @@
 package input
 
 type ProductInput struct {
-	Title string `json:"title" binding:"required"`
-	Price int    `json:"price" binding:"required"`
-	Stock int    `json:"stock" binding:"required"`
+	Name  string `form:"name" binding:"required"`
+	Price int    `form:"price" binding:"required"`
+	Stock int    `form:"stock" binding:"required"`
 }
 
 type GetinputProductID struct {
