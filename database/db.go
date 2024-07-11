@@ -18,22 +18,32 @@ func InitDb() (*gorm.DB, error) {
 		}
 	}
 
-	dbUsername := os.Getenv("MYSQLUSER")
-	dbPassword := os.Getenv("MYSQLPASSWORD")
-	dbHost := os.Getenv("MYSQLHOST")
-	dbPort := os.Getenv("MYSQLPORT")
-	dbName := os.Getenv("MYSQLDATABASE")
+	databaseURL := os.Getenv("DATABASE_URL")
 
-	// dsn := "root:@tcp(127.0.0.1:3306)/gwf-apps?charset=utf8mb4&parseTime=True&loc=Local"
-	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	// if err != nil {
-	// 	log.Fatal("DB Connection Error")
-	// }
+	var dsn string
+	if databaseURL != "" {
+		dsn = databaseURL
+	} else {
+		dbUsername := os.Getenv("MYSQLUSER")
+		dbPassword := os.Getenv("MYSQLPASSWORD")
+		dbHost := os.Getenv("MYSQLHOST")
+		dbPort := os.Getenv("MYSQLPORT")
+		dbName := os.Getenv("MYSQLDATABASE")
 
-	dsn := dbUsername + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?charset=utf8mb4&parseTime=True&loc=Local"
+		// Debug prints to verify environment variables
+		log.Println("MYSQLUSER:", dbUsername)
+		log.Println("MYSQLPASSWORD:", dbPassword)
+		log.Println("MYSQLHOST:", dbHost)
+		log.Println("MYSQLPORT:", dbPort)
+		log.Println("MYSQLDATABASE:", dbName)
+
+		// Construct the DSN from individual environment variables
+		dsn = dbUsername + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?charset=utf8mb4&parseTime=True&loc=Local"
+	}
+
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("DB Connection Error", err)
+		log.Fatal("DB Connection Error:", err)
 	}
 
 	// Auto Migration
