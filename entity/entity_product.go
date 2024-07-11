@@ -3,13 +3,14 @@ package entity
 import "time"
 
 type Products struct {
-	ID        int
-	Name      string
-	Price     int
-	Stock     int
-	FileName  []ProductImage `gorm:"foreignKey:ProductID"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID          int
+	Name        string
+	Price       int
+	Stock       int
+	Description string
+	FileName    []ProductImage `gorm:"foreignKey:ProductID"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type ProductImage struct {

@@ -63,7 +63,7 @@ func (s *serviceStatusEkspedisi) CreateStatusEkspedisi(input input.InputStatusEk
 		return nil, err
 	}
 
-	if findOrder.OngkirID == 0 {
+	if findOrder.OngkirID == nil {
 
 		return nil, fmt.Errorf("invalid OngkirID: %d", findOrder.Ongkir.ID)
 	}

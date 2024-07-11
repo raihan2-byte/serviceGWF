@@ -87,6 +87,7 @@ func (s *serviceProduct) CreateProduct(input input.ProductInput) (*entity.Produc
 	product.Name = input.Name
 	product.Price = input.Price
 	product.Stock = input.Stock
+	product.Description = input.Description
 
 	newProduct, err := s.repositoryProduct.Save(product)
 	if err != nil {

@@ -113,12 +113,15 @@ func StartApp() {
 	api4.POST("/", middleware.AuthMiddleware(authService, userService), orderHandler.CreateOrder)
 	api4.GET("/", middleware.AuthMiddleware(authService, userService), orderHandler.GetOrderHistoryByUserID)
 	api4.GET("/orders", middleware.AuthMiddleware(authService, userService), middleware.AuthRole(authService, userService), orderHandler.GetAllOrderHistory)
+	api4.POST("/:orderID", middleware.AuthMiddleware(authService, userService), orderHandler.CreateOrderDetails)
+	api4.GET("/:orderID", middleware.AuthMiddleware(authService, userService), orderHandler.GetOrderByID)
 
 	apiPayment := router.Group("/api/payment")
 	apiPayment.GET("/", middleware.AuthMiddleware(authService, userService), paymentHandler.GetAllPaymentByUserID)
 	apiPayment.GET("/payments", middleware.AuthMiddleware(authService, userService), middleware.AuthRole(authService, userService), paymentHandler.GetAllPayment)
 	apiPayment.DELETE("/", middleware.AuthMiddleware(authService, userService), middleware.AuthRole(authService, userService), paymentHandler.DeletePayment)
 	apiPayment.POST("/:order_id", middleware.AuthMiddleware(authService, userService), paymentHandler.DoPayment)
+	apiPayment.GET("/:orderID", paymentHandler.GetStatusPayment)
 	// apiPayment.POST("/", paymentHandler.GetPaymentNotification)
 
 	makeDonationRepository := repository.NewRepositoryMakeDonation(db)
@@ -140,6 +143,7 @@ func StartApp() {
 	apiPaymentDonation.GET("/payment-donations", middleware.AuthMiddleware(authService, userService), middleware.AuthRole(authService, userService), paymentDonationHandler.GetAllPayment)
 	apiPaymentDonation.DELETE("/", middleware.AuthMiddleware(authService, userService), middleware.AuthRole(authService, userService), paymentDonationHandler.DeletePayment)
 	apiPaymentDonation.POST("/:make_donation_id", middleware.AuthMiddleware(authService, userService), paymentDonationHandler.DoPaymentDonation)
+	apiPaymentDonation.GET("/:orderID", paymentDonationHandler.GetStatusPayment)
 	// apiPaymentDonation.POST("/", paymentDonationHandler.GetPaymentDonationNotification)
 	// apiPaymentDonation.POST("/:order_id", middleware.AuthMiddleware(authService, userService), paymentDonationHandler.DoPayment)
 
@@ -158,7 +162,7 @@ func StartApp() {
 
 	api6.GET("/provinces", provinceHandler.GetProvinces)
 	api6.GET("/city/:id", provinceHandler.GetCityByProvinceID)
-	api6.GET("/calculate-shipping-fee", provinceHandler.CalculateShippingFee)
+	api6.POST("/calculate-shipping-fee", provinceHandler.CalculateShippingFee)
 	api6.POST("/apply-shipping", middleware.AuthMiddleware(authService, userService), provinceHandler.ApplyShipping)
 	// api6.POST("/apply-shipping-user", middleware.AuthMiddleware(authService, userService), provinceHandler.CreateAddressUser)
 	// Port

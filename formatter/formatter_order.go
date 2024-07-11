@@ -8,7 +8,7 @@ import (
 type Order struct {
 	ID          string                `json:"id"`
 	UserID      int                   `json:"user_id"`
-	OngkirID    int                   `json:"ekspedisi_id"`
+	OngkirID    *int                  `json:"ekspedisi_id"`
 	TotalPrice  int                   `json:"total_price"`
 	ShippingFee int                   `json:"shipping_fee"`
 	Ongkir      ApplyShippingResponse `json:"ekspedisi"`
@@ -42,16 +42,25 @@ type ApplyShippingResponse struct {
 }
 
 type OrderItemPost struct {
-	Quantity  int `json:"quantity"`
-	Price     int `json:"price"`
-	ProductID int `json:"product_id"`
+	Quantity  int      `json:"quantity"`
+	Price     int      `json:"price"`
+	ProductID int      `json:"product_id"`
+	Products  Products `json:"product"`
 }
 
 func FormatterPostItem(item entity.OrderItem) OrderItemPost {
+	product := item.Product
+
+	productFormatter := Products{
+		Name:  product.Name,
+		Price: product.Price,
+	}
+
 	formatterItem := OrderItemPost{
 		Quantity:  item.Quantity,
 		Price:     item.Price,
 		ProductID: item.ProductID,
+		Products:  productFormatter,
 	}
 
 	return formatterItem
@@ -61,7 +70,7 @@ func FormatterPostItem(item entity.OrderItem) OrderItemPost {
 type OrderPost struct {
 	ID          string          `json:"id"`
 	UserID      int             `json:"user_id"`
-	OngkirID    int             `json:"ekspedisi_id"`
+	OngkirID    *int            `json:"ekspedisi_id"`
 	TotalPrice  int             `json:"total_price"`
 	ShippingFee int             `json:"shipping_fee"`
 	Items       []OrderItemPost `json:"items"`

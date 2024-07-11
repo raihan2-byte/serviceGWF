@@ -14,6 +14,8 @@ type RepositoryPayment interface {
 	Update(payment *entity.Payment) (*entity.Payment, error)
 	Delete(payment *entity.Payment) (*entity.Payment, error)
 	FindAllByUserID(ID int) ([]*entity.Payment, error)
+	SaveMidtrans(payment *entity.DoPayment) (*entity.DoPayment, error)
+	FindByOrderId(ID string) (*entity.Payment, error)
 }
 
 type repositoryPayment struct {
@@ -22,6 +24,15 @@ type repositoryPayment struct {
 
 func NewRepositoryPayment(db *gorm.DB) *repositoryPayment {
 	return &repositoryPayment{db}
+}
+
+func (r *repositoryPayment) SaveMidtrans(payment *entity.DoPayment) (*entity.DoPayment, error) {
+	err := r.db.Create(&payment).Error
+
+	if err != nil {
+		return payment, err
+	}
+	return payment, nil
 }
 
 func (r *repositoryPayment) FindAll() ([]*entity.Payment, error) {
@@ -88,6 +99,17 @@ func (r *repositoryPayment) FindAllByUserID(ID int) ([]*entity.Payment, error) {
 // 	return payment, nil
 
 // }
+
+func (r *repositoryPayment) FindByOrderId(ID string) (*entity.Payment, error) {
+	var payment *entity.Payment
+
+	err := r.db.Preload("User").Preload("Order").Where("order_id = ?", ID).Find(&payment).Error
+
+	if err != nil {
+		return payment, err
+	}
+	return payment, nil
+}
 
 func (r *repositoryPayment) Update(payment *entity.Payment) (*entity.Payment, error) {
 	err := r.db.Save(&payment).Error

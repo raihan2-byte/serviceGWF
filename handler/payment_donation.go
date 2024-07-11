@@ -32,13 +32,17 @@ func (h *paymentDonationHandler) DoPaymentDonation(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.paymentDonationService.DoPaymentDonation(req, makeDonationID)
+	currentUser := c.MustGet("currentUser").(*entity.User)
+	//ini inisiasi userID yang mana ingin mendapatkan id si user
+	getUserId := currentUser.ID
+
+	resp, err := h.paymentDonationService.DoPaymentDonation(req, makeDonationID, getUserId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, formatter.FormatSimplePaymentResponse(resp))
+	c.JSON(http.StatusOK, (resp))
 }
 
 func (h *paymentDonationHandler) GetPaymentDonationNotification(c *gin.Context) {
@@ -65,6 +69,21 @@ func (h *paymentDonationHandler) GetPaymentDonationNotification(c *gin.Context) 
 	//2. check request transaction_status
 	//3. map transaction_status to db payment status
 	//4. update db payment status
+}
+
+func (h *paymentDonationHandler) GetStatusPayment(c *gin.Context) {
+
+	orderID := c.Param("orderID")
+
+	get, err := h.paymentDonationService.FindStatus(orderID)
+
+	if err != nil {
+		response := helper.APIresponse(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	response := helper.APIresponse(http.StatusOK, get)
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *paymentDonationHandler) GetAllPaymentByUserID(c *gin.Context) {

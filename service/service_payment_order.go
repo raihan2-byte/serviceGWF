@@ -15,6 +15,7 @@ var (
 		"bca":  midtrans.BankBca,
 		"bri":  midtrans.BankBri,
 		"cimb": midtrans.BankCimb,
+		"bni":  midtrans.BankBni,
 	}
 )
 
@@ -40,7 +41,8 @@ type ServicePayment interface {
 	DeletePayment(ID int) (*entity.Payment, error)
 	HandleNotification(res *entity.MidtransNotificationRequest) error
 	GetAllByUserID(ID int) ([]*entity.Payment, error)
-	DoPayment(req input.SubmitPaymentRequest, orderID string) (*entity.DoPayment, error)
+	DoPayment(req input.SubmitPaymentRequest, orderID string, userID int) (*entity.DoPayment, error)
+	FindStatus(orderID string) (*entity.Payment, error)
 }
 
 type servicePayment struct {
@@ -77,10 +79,23 @@ func (s *servicePayment) HandleNotification(req *entity.MidtransNotificationRequ
 	return nil
 }
 
-func (s *servicePayment) DoPayment(req input.SubmitPaymentRequest, orderID string) (*entity.DoPayment, error) {
+func (s *servicePayment) FindStatus(orderID string) (*entity.Payment, error) {
+	get, err := s.repositoryPayment.FindByOrderId(orderID)
+	if err != nil {
+		return get, err
+	}
+
+	return get, nil
+}
+
+func (s *servicePayment) DoPayment(req input.SubmitPaymentRequest, orderID string, userID int) (*entity.DoPayment, error) {
 	getOrder, err := s.repositoryOrder.FindById(orderID)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching order: %w", err)
+	}
+
+	if getOrder.UserID != userID {
+		return nil, fmt.Errorf("unauthorized user")
 	}
 
 	chosenBank, ok := listOfBank[req.BankTransfer]
@@ -110,6 +125,16 @@ func (s *servicePayment) DoPayment(req input.SubmitPaymentRequest, orderID strin
 		TransactionID: resp.TransactionID,
 	}
 
+	// mappedResp, err := mapChargeToResponse(resp)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("error mapping charge response: %w", err)
+	// }
+
+	// _, err = s.repositoryPayment.SaveMidtrans(mappedResp)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("error saving payment to Midtrans: %w", err)
+	// }
+
 	_, err = s.repositoryPayment.Save(pay)
 	if err != nil {
 		return nil, fmt.Errorf("error saving payment: %w", err)
@@ -138,6 +163,7 @@ func mapChargeToResponse(resp *coreapi.ChargeResponse) (*entity.DoPayment, error
 		PaymentType:       resp.PaymentType,
 		TransactionStatus: resp.TransactionStatus,
 		VaNumbers:         vaNumbers,
+		TransactionTime:   resp.TransactionTime,
 		MerchantID:        "G317569034",
 	}, nil
 }

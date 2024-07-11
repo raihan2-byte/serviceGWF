@@ -10,7 +10,7 @@ import (
 
 func InitDb() (*gorm.DB, error) {
 
-	dsn := "root:@tcp(127.0.0.1:3306)/pay?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:@tcp(127.0.0.1:3306)/gwf-apps?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("DB Connection Error")
@@ -27,6 +27,8 @@ func InitDb() (*gorm.DB, error) {
 	db.AutoMigrate(&entity.Order{})
 	db.AutoMigrate(&entity.OrderItem{})
 	db.AutoMigrate(&entity.ApplyShippingResponse{})
+	db.AutoMigrate(&entity.DoPayment{})
+	// db.AutoMigrate(&entity.VaNumber{})
 	errs := db.AutoMigrate(&entity.MakeDonation{})
 	if errs != nil {
 		// Tangani kesalahan di sini, misalnya dengan mencetak pesan kesalahan atau mengembalikan kesalahan

@@ -52,7 +52,7 @@ type PaymentStatusEkspedisi struct {
 
 type GetOrder struct {
 	ID          string                `json:"id"`
-	OngkirID    int                   `json:"ekspedisi_id"`
+	OngkirID    *int                  `json:"ekspedisi_id"`
 	TotalPrice  int                   `json:"total_price"`
 	ShippingFee int                   `json:"shipping_fee"`
 	Items       []ItemStatusEkspedisi `json:"items"`

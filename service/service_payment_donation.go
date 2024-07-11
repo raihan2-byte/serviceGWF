@@ -15,8 +15,9 @@ type ServicePaymentDonation interface {
 	GetPaymentDonationByID(ID string) (*entity.PaymentDonation, error)
 	DeletePaymentDonation(ID string) (*entity.PaymentDonation, error)
 	GetAllDonationByUserID(ID int) ([]*entity.PaymentDonation, error)
-	DoPaymentDonation(req input.SubmitPaymentRequest, makeDonationID string) (*entity.DoPayment, error)
+	DoPaymentDonation(req input.SubmitPaymentRequest, makeDonationID string, userID int) (*entity.DoPayment, error)
 	HandleNotificationPaymentDonation(req *entity.MidtransNotificationRequest) error
+	FindStatus(orderID string) (*entity.PaymentDonation, error)
 }
 
 type servicePaymentDonation struct {
@@ -39,10 +40,23 @@ func NewServicePaymentDonation(repositoryPaymentDetails repository.RepositoryPay
 	}
 }
 
-func (s *servicePaymentDonation) DoPaymentDonation(req input.SubmitPaymentRequest, makeDonationID string) (*entity.DoPayment, error) {
+func (s *servicePaymentDonation) FindStatus(orderID string) (*entity.PaymentDonation, error) {
+	get, err := s.repositoryPaymentDonation.FindByOrderId(orderID)
+	if err != nil {
+		return get, err
+	}
+
+	return get, nil
+}
+
+func (s *servicePaymentDonation) DoPaymentDonation(req input.SubmitPaymentRequest, makeDonationID string, userID int) (*entity.DoPayment, error) {
 	getDonationID, err := s.repositoryMakeDonation.FindById(makeDonationID)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching donation: %w", err)
+	}
+
+	if getDonationID.UserID != userID {
+		return nil, fmt.Errorf("unauthorized user")
 	}
 
 	chosenBank, ok := listOfBank[req.BankTransfer]
@@ -72,6 +86,16 @@ func (s *servicePaymentDonation) DoPaymentDonation(req input.SubmitPaymentReques
 		TransactionID:  resp.TransactionID,
 	}
 
+	// mappedResp, err := mapChargeToResponse(resp)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("error mapping charge response: %w", err)
+	// }
+
+	// _, err = s.repositoryPaymentDonation.SaveMidtrans(mappedResp)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("error saving payment to Midtrans: %w", err)
+	// }
+
 	_, err = s.repositoryPaymentDonation.Save(pay)
 	if err != nil {
 		return nil, fmt.Errorf("error saving payment donation: %w", err)
@@ -93,11 +117,12 @@ func mapChargeToResponseDonation(resp *coreapi.ChargeResponse) (*entity.DoPaymen
 	}
 
 	return &entity.DoPayment{
-		TransactionID: resp.TransactionID,
-		OrderID:       resp.OrderID,
-		GrossAmount:   resp.GrossAmount,
-		VaNumbers:     vaNumbers,
-		MerchantID:    "G317569034",
+		TransactionID:   resp.TransactionID,
+		OrderID:         resp.OrderID,
+		GrossAmount:     resp.GrossAmount,
+		VaNumbers:       vaNumbers,
+		TransactionTime: resp.TransactionTime,
+		MerchantID:      "G317569034",
 	}, nil
 }
 

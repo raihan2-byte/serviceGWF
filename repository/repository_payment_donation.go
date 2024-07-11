@@ -14,6 +14,8 @@ type RepositoryPaymentDonation interface {
 	Delete(payment *entity.PaymentDonation) (*entity.PaymentDonation, error)
 	FindAllByUserID(ID int) ([]*entity.PaymentDonation, error)
 	FindByTransactionID(ID string) (*entity.PaymentDonation, error)
+	FindByOrderId(ID string) (*entity.PaymentDonation, error)
+	// SaveMidtrans(payment *entity.DoPayment) (*entity.DoPayment, error)
 	// UpdateStatusByID(paymentID int, statusPayment string) (*entity.Payment, error)
 }
 
@@ -55,7 +57,7 @@ func (r *repositoryPaymentDonation) FindByTransactionID(ID string) (*entity.Paym
 func (r *repositoryPaymentDonation) FindAll() ([]*entity.PaymentDonation, error) {
 	var payment []*entity.PaymentDonation
 
-	err := r.db.Preload("Order").Preload("User").Preload("Order.Items").Preload("Order.Items.Product").Preload("Order.Ongkir").Find(&payment).Error
+	err := r.db.Preload("User").Preload("MakeDonation").Find(&payment).Error
 
 	if err != nil {
 		return payment, err
@@ -73,10 +75,21 @@ func (r *repositoryPaymentDonation) Save(payment *entity.PaymentDonation) (*enti
 	return payment, nil
 }
 
+func (r *repositoryPaymentDonation) FindByOrderId(ID string) (*entity.PaymentDonation, error) {
+	var payment *entity.PaymentDonation
+
+	err := r.db.Preload("User").Preload("MakeDonation").Where("make_donation_id = ?", ID).Find(&payment).Error
+
+	if err != nil {
+		return payment, err
+	}
+	return payment, nil
+}
+
 func (r *repositoryPaymentDonation) FindById(ID string) (*entity.PaymentDonation, error) {
 	var payment *entity.PaymentDonation
 
-	err := r.db.Preload("Order").Preload("User").Preload("Order.Items").Preload("Order.Items.Product").Preload("Order.Ongkir").Where("id = ?", ID).Find(&payment).Error
+	err := r.db.Preload("User").Preload("MakeDonation").Where("id = ?", ID).Find(&payment).Error
 
 	if err != nil {
 		return payment, err
@@ -93,6 +106,24 @@ func (r *repositoryPaymentDonation) FindAllByUserID(ID int) ([]*entity.PaymentDo
 	}
 	return find, nil
 }
+
+// func (r *repositoryPaymentDonation) SaveMidtrans(payment *entity.DoPayment) (*entity.DoPayment, error) {
+// 	err := r.db.Create(&payment).Error
+
+// 	if err != nil {
+// 		return payment, err
+// 	}
+
+// 	for _, va := range payment.VaNumbers {
+// 		va.DoPaymentID = payment.ID
+// 		err := r.db.Create(&va).Error
+// 		if err != nil {
+// 			return payment, err
+// 		}
+// 	}
+
+// 	return payment, nil
+// }
 
 func (r *repositoryPaymentDonation) Update(payment *entity.PaymentDonation) (*entity.PaymentDonation, error) {
 	err := r.db.Save(&payment).Error

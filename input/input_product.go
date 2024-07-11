@@ -1,9 +1,10 @@
 package input
 
 type ProductInput struct {
-	Name  string `form:"name" binding:"required"`
-	Price int    `form:"price" binding:"required"`
-	Stock int    `form:"stock" binding:"required"`
+	Name        string `form:"name" binding:"required"`
+	Price       int    `form:"price" binding:"required"`
+	Stock       int    `form:"stock" binding:"required"`
+	Description string `form:"description" binding:"required"`
 }
 
 type GetinputProductID struct {

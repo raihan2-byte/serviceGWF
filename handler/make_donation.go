@@ -25,9 +25,8 @@ func (h *makeDonationHandler) CreateDonation(c *gin.Context) {
 
 	err := c.ShouldBindJSON(&input)
 	if err != nil {
-		errors := helper.FormatValidationError(err)
-		errorMessage := gin.H{"errors": errors}
-		response := helper.APIresponse(http.StatusUnprocessableEntity, errorMessage)
+
+		response := helper.APIresponse(http.StatusUnprocessableEntity, err.Error())
 		c.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}
@@ -38,7 +37,7 @@ func (h *makeDonationHandler) CreateDonation(c *gin.Context) {
 
 	makeDonation, err := h.makeDonationService.CreateDonation(getUserId, input)
 	if err != nil {
-		response := helper.APIresponse(http.StatusUnprocessableEntity, nil)
+		response := helper.APIresponse(http.StatusUnprocessableEntity, err.Error())
 		c.JSON(http.StatusUnprocessableEntity, response)
 		return
 	}

@@ -36,7 +36,7 @@ func (r *repository_order) FindAll() ([]*entity.Order, error) {
 
 func (r *repository_order) FindById(ID string) (*entity.Order, error) {
 	var order *entity.Order
-	err := r.db.Preload("Ongkir").Where("id = ?", ID).Find(&order).Error
+	err := r.db.Preload("Ongkir").Preload("Items").Preload("Items.Product").Where("id = ?", ID).Find(&order).Error
 	if err != nil {
 		return order, err
 	}

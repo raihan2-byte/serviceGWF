@@ -42,7 +42,11 @@ func (h *paymentHandler) DoPayment(c *gin.Context) {
 
 	log.Printf("Request payload: %+v", req)
 
-	resp, err := h.paymentService.DoPayment(req, orderID)
+	currentUser := c.MustGet("currentUser").(*entity.User)
+	//ini inisiasi userID yang mana ingin mendapatkan id si user
+	getUserId := currentUser.ID
+
+	resp, err := h.paymentService.DoPayment(req, orderID, getUserId)
 	if err != nil {
 		log.Printf("Error during payment: %+v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -51,6 +55,21 @@ func (h *paymentHandler) DoPayment(c *gin.Context) {
 
 	log.Printf("Payment response: %+v", formatter.FormatSimplePaymentResponse(resp))
 	c.JSON(http.StatusOK, resp)
+}
+
+func (h *paymentHandler) GetStatusPayment(c *gin.Context) {
+
+	orderID := c.Param("orderID")
+
+	get, err := h.paymentService.FindStatus(orderID)
+
+	if err != nil {
+		response := helper.APIresponse(http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	response := helper.APIresponse(http.StatusOK, get)
+	c.JSON(http.StatusOK, response)
 }
 
 // will be called by midtrans to notify payment status
